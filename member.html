@@ -1,1 +1,512 @@
-This attachment was removed because it contains data that could pose a security risk.
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>회원 상담실</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+  :root {
+    --bg: #f5f3ee; --bg-card: #ffffff; --bg-soft: #ebe7df;
+    --text: #1f1d1a; --text-muted: #6b6760; --border: #e3ddd1;
+    --accent: #b8462b; --accent-soft: #f5e4dc;
+    --ok: #2f7a4a; --ok-soft: #e3f0e6;
+    --warn: #b07a18; --warn-soft: #f7edd6;
+    --danger: #b22e2e; --danger-soft: #f5e0e0;
+    --radius: 10px; --radius-sm: 6px;
+    --shadow: 0 1px 3px rgba(40,30,20,0.06), 0 6px 18px rgba(40,30,20,0.04);
+    --s1: 6px; --s2: 12px; --s3: 18px; --s4: 26px; --s5: 40px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1815; --bg-card: #25221e; --bg-soft: #2f2b26;
+      --text: #ece8df; --text-muted: #9c958a; --border: #3a3530;
+      --accent: #d96e4e; --accent-soft: #3a251d;
+      --ok: #6dba87; --ok-soft: #20322a;
+      --warn: #d9a949; --warn-soft: #34291a;
+      --danger: #e07474; --danger-soft: #36211f;
+      --shadow: 0 1px 3px rgba(0,0,0,0.3), 0 6px 18px rgba(0,0,0,0.25);
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'Noto Sans KR', sans-serif; font-size: 14px; line-height: 1.55;
+  }
+  .num { font-variant-numeric: tabular-nums; }
+  button { font-family: inherit; cursor: pointer; }
+  input, textarea, select { font-family: inherit; font-size: 14px; }
+  .hidden { display: none !important; }
+
+  .login-wrap {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    padding: var(--s3);
+  }
+  .login-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 14px; padding: var(--s4) var(--s4);
+    max-width: 400px; width: 100%; box-shadow: var(--shadow);
+  }
+  .login-card h1 { margin: 0 0 var(--s1); font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
+  .login-card .sub { color: var(--text-muted); font-size: 13px; margin-bottom: var(--s3); }
+  .login-card label { display: block; font-size: 12.5px; color: var(--text-muted); margin-bottom: 6px; font-weight: 500; }
+  .login-card input {
+    width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+    background: var(--bg); color: var(--text); font-size: 15px; letter-spacing: 0.02em;
+  }
+  .login-card input:focus { outline: 2px solid var(--accent-soft); outline-offset: 0; border-color: var(--accent); }
+  .btn {
+    padding: 12px 20px; border-radius: var(--radius-sm); border: none;
+    background: var(--accent); color: white; font-weight: 600; font-size: 14px;
+    width: 100%; margin-top: var(--s2); transition: opacity 0.15s;
+  }
+  .btn:hover { opacity: 0.9; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-secondary { background: var(--bg-soft); color: var(--text); }
+  .err-msg {
+    background: var(--danger-soft); color: var(--danger); padding: 10px 12px;
+    border-radius: var(--radius-sm); font-size: 13px; margin-bottom: var(--s2);
+  }
+  .ok-msg {
+    background: var(--ok-soft); color: var(--ok); padding: 10px 12px;
+    border-radius: var(--radius-sm); font-size: 13px; margin-bottom: var(--s2);
+  }
+  .login-hint { font-size: 12px; color: var(--text-muted); margin-top: var(--s3); padding-top: var(--s2); border-top: 1px solid var(--border); }
+
+  .wrap { max-width: 800px; margin: 0 auto; padding: var(--s3) var(--s3) var(--s5); }
+  .top {
+    display: flex; align-items: center; justify-content: space-between;
+    padding-bottom: var(--s3); margin-bottom: var(--s3); border-bottom: 1px solid var(--border);
+    flex-wrap: wrap; gap: var(--s2);
+  }
+  .top .user-info h1 { margin: 0; font-size: 20px; font-weight: 700; }
+  .top .user-info .sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .top button { width: auto; padding: 8px 14px; font-size: 13px; margin: 0; }
+
+  .tabs {
+    display: flex; gap: 2px; background: var(--bg-soft);
+    padding: 4px; border-radius: var(--radius-sm); margin-bottom: var(--s3); width: fit-content;
+  }
+  .tab {
+    padding: 9px 18px; background: transparent; border: none;
+    color: var(--text-muted); font-weight: 500; border-radius: 4px; white-space: nowrap;
+  }
+  .tab.active { background: var(--bg-card); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s2); margin-bottom: var(--s3); }
+  @media (max-width: 600px) { .stats { grid-template-columns: 1fr; } }
+  .stat {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: var(--s3) var(--s2);
+  }
+  .stat .label { font-size: 11.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+  .stat .value { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
+  .stat .value .unit { font-size: 14px; color: var(--text-muted); margin-left: 4px; font-weight: 500; }
+  .stat .value.danger { color: var(--danger); }
+  .stat .value.warn { color: var(--warn); }
+
+  .card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: var(--s3); margin-bottom: var(--s3);
+  }
+  .card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--s2); }
+  .card-head h3 { margin: 0; font-size: 15px; font-weight: 600; }
+  .card-head button { width: auto; padding: 7px 12px; font-size: 12.5px; margin: 0; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid var(--border); }
+  th { font-weight: 600; color: var(--text-muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.03em; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .status-pill {
+    display: inline-block; padding: 3px 9px; border-radius: 999px;
+    font-size: 11.5px; font-weight: 600;
+  }
+  .status-pill.ok { background: var(--ok-soft); color: var(--ok); }
+  .status-pill.warn { background: var(--warn-soft); color: var(--warn); }
+  .status-pill.danger { background: var(--danger-soft); color: var(--danger); }
+  .empty { padding: var(--s4) var(--s2); text-align: center; color: var(--text-muted); font-size: 13px; }
+
+  .thread-list { display: flex; flex-direction: column; gap: var(--s1); }
+  .thread-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: var(--s2); border: 1px solid var(--border); border-radius: var(--radius-sm);
+    cursor: pointer; transition: background 0.12s, border-color 0.12s;
+  }
+  .thread-item:hover { background: var(--bg-soft); border-color: var(--accent-soft); }
+  .thread-item .subject { font-weight: 500; margin-bottom: 3px; }
+  .thread-item .meta { font-size: 12px; color: var(--text-muted); }
+
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    display: flex; align-items: center; justify-content: center; padding: var(--s2); z-index: 100;
+  }
+  .modal {
+    background: var(--bg-card); border-radius: var(--radius); max-width: 600px; width: 100%;
+    max-height: 90vh; display: flex; flex-direction: column; overflow: hidden;
+  }
+  .modal-head {
+    padding: var(--s3); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .modal-head h3 { margin: 0; font-size: 16px; font-weight: 600; }
+  .modal-body { padding: var(--s3); overflow-y: auto; flex: 1; }
+  .modal-foot { padding: var(--s3); border-top: 1px solid var(--border); display: flex; gap: var(--s2); }
+  .modal-foot .btn { margin-top: 0; }
+  .close { background: transparent; border: none; font-size: 20px; color: var(--text-muted); cursor: pointer; padding: 4px 8px; }
+
+  .field { margin-bottom: var(--s2); }
+  .field label { display: block; font-size: 12.5px; color: var(--text-muted); margin-bottom: 4px; font-weight: 500; }
+  .field input, .field select, .field textarea {
+    width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+    background: var(--bg); color: var(--text);
+  }
+  .field textarea { min-height: 100px; resize: vertical; font-family: inherit; }
+
+  .messages { display: flex; flex-direction: column; gap: var(--s2); }
+  .msg {
+    padding: var(--s2) var(--s3); border-radius: var(--radius-sm);
+    max-width: 85%; word-break: break-word; white-space: pre-wrap;
+  }
+  .msg.member { background: var(--accent-soft); color: var(--text); align-self: flex-end; }
+  .msg.admin { background: var(--bg-soft); color: var(--text); align-self: flex-start; }
+  .msg .meta { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+  .msg .meta strong { color: var(--text); }
+</style>
+</head>
+<body>
+
+<div id="login-view" class="login-wrap">
+  <div class="login-card">
+    <h1>회원 상담실</h1>
+    <p class="sub">휴대폰번호로 로그인하세요</p>
+    <div id="login-err" class="err-msg hidden"></div>
+    <div class="field">
+      <label for="phone-input">휴대폰 번호</label>
+      <input id="phone-input" type="tel" inputmode="numeric" maxlength="13" placeholder="01012345678" autocomplete="tel" />
+    </div>
+    <button class="btn" id="login-btn">로그인</button>
+    <div class="login-hint">
+      ※ 등록되지 않은 번호는 관리자에게 문의해 주세요.<br>
+      ※ <a href="index.html" style="color:var(--text-muted);">메인으로</a>
+    </div>
+  </div>
+</div>
+
+<div id="main-view" class="wrap hidden">
+  <div class="top">
+    <div class="user-info">
+      <h1 id="user-name">—</h1>
+      <div class="sub" id="user-phone">—</div>
+    </div>
+    <button class="btn btn-secondary" id="logout-btn">로그아웃</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="fees">내 회비</button>
+    <button class="tab" data-tab="qa">1:1 상담</button>
+  </div>
+
+  <div id="tab-fees">
+    <div class="stats" id="fee-stats"></div>
+    <div class="card">
+      <div class="card-head"><h3>월별 회비</h3></div>
+      <div id="fee-list"></div>
+    </div>
+  </div>
+
+  <div id="tab-qa" class="hidden">
+    <div class="card">
+      <div class="card-head">
+        <h3>내 상담 내역</h3>
+        <button class="btn" id="new-thread-btn" style="width:auto;">+ 새 상담</button>
+      </div>
+      <div id="thread-list"></div>
+    </div>
+  </div>
+</div>
+
+<div id="new-thread-modal" class="modal-backdrop hidden">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>새 상담 작성</h3>
+      <button class="close" data-close="new-thread-modal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div id="new-thread-err" class="err-msg hidden"></div>
+      <div class="field"><label>제목 *</label><input id="nt-subject" type="text" placeholder="문의 내용 한 줄 요약" /></div>
+      <div class="field"><label>관련 기간 (선택)</label><input id="nt-period" type="text" placeholder="예: 2026-06" /></div>
+      <div class="field"><label>내용 *</label><textarea id="nt-body" placeholder="문의 내용을 자세히 적어주세요"></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" data-close="new-thread-modal">취소</button>
+      <button class="btn" id="nt-submit">등록</button>
+    </div>
+  </div>
+</div>
+
+<div id="thread-modal" class="modal-backdrop hidden">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="thread-subject">—</h3>
+      <button class="close" data-close="thread-modal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="messages" id="messages"></div>
+    </div>
+    <div class="modal-foot" style="flex-direction:column;gap:var(--s2);">
+      <textarea id="reply-body" placeholder="답변/추가 문의 작성" style="width:100%;min-height:80px;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);"></textarea>
+      <button class="btn" id="reply-btn">메시지 전송</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const sb = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+
+  function escapeHTML(s) { if (s == null) return ''; const d = document.createElement('div'); d.textContent = String(s); return d.innerHTML; }
+  function fmtKRW(n) { return new Intl.NumberFormat('ko-KR').format(Number(n || 0)); }
+  function fmtDate(s) { if (!s) return '—'; const d = new Date(s); return isNaN(d) ? s : d.toLocaleDateString('ko-KR'); }
+  function fmtDateTime(s) { if (!s) return '—'; const d = new Date(s); return isNaN(d) ? s : d.toLocaleString('ko-KR', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' }); }
+  function fmtPhone(p) { const s = String(p||''); return s.length === 11 ? s.slice(0,3)+'-'+s.slice(3,7)+'-'+s.slice(7) : s; }
+  function normPhone(s) { return String(s||'').replace(/[^0-9]/g, ''); }
+  function showErr(id, msg) { const el = document.getElementById(id); el.textContent = msg; el.classList.remove('hidden'); }
+  function clearErr(id) { document.getElementById(id).classList.add('hidden'); }
+  function statusClass(s) { return s === '완납' ? 'ok' : (s === '부분납' ? 'warn' : 'danger'); }
+  function threadStatusClass(s) { return s === '답변완료' ? 'ok' : (s === '종료' ? 'warn' : 'danger'); }
+
+  let currentUser = null;
+
+  document.getElementById('login-btn').addEventListener('click', doLogin);
+  document.getElementById('phone-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') doLogin();
+  });
+
+  async function doLogin() {
+    clearErr('login-err');
+    const phone = normPhone(document.getElementById('phone-input').value);
+    if (!phone || phone.length < 10) {
+      showErr('login-err', '휴대폰 번호를 정확히 입력해 주세요.');
+      return;
+    }
+    try {
+      const { data, error } = await sb.from('members').select('id, name, phone, is_admin').eq('phone', phone).maybeSingle();
+      if (error) throw error;
+      if (!data) {
+        showErr('login-err', '등록되지 않은 번호입니다. 관리자에게 문의하세요.');
+        return;
+      }
+      if (data.is_admin) {
+        showErr('login-err', '관리자 계정입니다. 관리자 콘솔을 이용해 주세요.');
+        return;
+      }
+      currentUser = data;
+      try { sessionStorage.setItem('member_user', JSON.stringify(data)); } catch (_) {}
+      enterApp();
+    } catch (e) {
+      console.error(e);
+      showErr('login-err', '로그인 중 오류: ' + e.message);
+    }
+  }
+
+  function enterApp() {
+    document.getElementById('login-view').classList.add('hidden');
+    document.getElementById('main-view').classList.remove('hidden');
+    document.getElementById('user-name').textContent = currentUser.name + ' 님';
+    document.getElementById('user-phone').textContent = fmtPhone(currentUser.phone);
+    loadFees();
+  }
+
+  document.getElementById('logout-btn').addEventListener('click', () => {
+    currentUser = null;
+    try { sessionStorage.removeItem('member_user'); } catch (_) {}
+    document.getElementById('phone-input').value = '';
+    document.getElementById('main-view').classList.add('hidden');
+    document.getElementById('login-view').classList.remove('hidden');
+  });
+
+  document.querySelectorAll('.tab').forEach(t => {
+    t.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      const tab = t.dataset.tab;
+      document.getElementById('tab-fees').classList.toggle('hidden', tab !== 'fees');
+      document.getElementById('tab-qa').classList.toggle('hidden', tab !== 'qa');
+      if (tab === 'qa') loadThreads();
+    });
+  });
+
+  async function loadFees() {
+    try {
+      const { data, error } = await sb.from('fee_payments').select('*').eq('member_id', currentUser.id).order('period', { ascending: false });
+      if (error) throw error;
+
+      let total = 0, paid = 0, unpaidCount = 0;
+      (data || []).forEach(r => {
+        total += Number(r.amount || 0);
+        paid += Number(r.paid_amount || 0);
+        if (r.status !== '완납') unpaidCount++;
+      });
+      const unpaid = total - paid;
+      document.getElementById('fee-stats').innerHTML = `
+        <div class="stat"><div class="label">총 부과액</div><div class="value num">${fmtKRW(total)}<span class="unit">원</span></div></div>
+        <div class="stat"><div class="label">납부액</div><div class="value num">${fmtKRW(paid)}<span class="unit">원</span></div></div>
+        <div class="stat"><div class="label">미납액</div><div class="value num ${unpaid>0?'danger':''}">${fmtKRW(unpaid)}<span class="unit">원</span></div></div>
+      `;
+
+      if (!data || data.length === 0) {
+        document.getElementById('fee-list').innerHTML = '<div class="empty">회비 내역이 없습니다.</div>';
+        return;
+      }
+      let html = '<table><thead><tr><th>기간</th><th class="num">부과액</th><th class="num">납부액</th><th>납부일</th><th>상태</th><th>메모</th></tr></thead><tbody>';
+      data.forEach(r => {
+        html += `<tr>
+          <td><strong>${escapeHTML(r.period)}</strong></td>
+          <td class="num">${fmtKRW(r.amount)}</td>
+          <td class="num">${fmtKRW(r.paid_amount)}</td>
+          <td>${fmtDate(r.paid_date)}</td>
+          <td><span class="status-pill ${statusClass(r.status)}">${escapeHTML(r.status)}</span></td>
+          <td style="color:var(--text-muted);font-size:12.5px;">${escapeHTML(r.note || '')}</td>
+        </tr>`;
+      });
+      html += '</tbody></table>';
+      document.getElementById('fee-list').innerHTML = html;
+    } catch (e) {
+      console.error(e);
+      document.getElementById('fee-list').innerHTML = '<div class="empty" style="color:var(--danger);">로딩 오류: ' + escapeHTML(e.message) + '</div>';
+    }
+  }
+
+  async function loadThreads() {
+    try {
+      const { data, error } = await sb.from('qa_threads').select('*').eq('member_id', currentUser.id).order('created_at', { ascending: false });
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        document.getElementById('thread-list').innerHTML = '<div class="empty">아직 상담 내역이 없습니다. "+ 새 상담" 버튼으로 등록하세요.</div>';
+        return;
+      }
+      let html = '<div class="thread-list">';
+      data.forEach(t => {
+        html += `<div class="thread-item" data-thread-id="${t.id}" data-subject="${escapeHTML(t.subject)}">
+          <div>
+            <div class="subject">${escapeHTML(t.subject)}</div>
+            <div class="meta">${escapeHTML(t.related_period || '—')} · ${fmtDateTime(t.created_at)}</div>
+          </div>
+          <span class="status-pill ${threadStatusClass(t.status)}">${escapeHTML(t.status)}</span>
+        </div>`;
+      });
+      html += '</div>';
+      document.getElementById('thread-list').innerHTML = html;
+      document.querySelectorAll('.thread-item').forEach(el => {
+        el.addEventListener('click', () => openThread(Number(el.dataset.threadId), el.dataset.subject));
+      });
+    } catch (e) {
+      console.error(e);
+      document.getElementById('thread-list').innerHTML = '<div class="empty" style="color:var(--danger);">로딩 오류: ' + escapeHTML(e.message) + '</div>';
+    }
+  }
+
+  document.getElementById('new-thread-btn').addEventListener('click', () => {
+    clearErr('new-thread-err');
+    document.getElementById('nt-subject').value = '';
+    document.getElementById('nt-period').value = '';
+    document.getElementById('nt-body').value = '';
+    document.getElementById('new-thread-modal').classList.remove('hidden');
+  });
+
+  document.getElementById('nt-submit').addEventListener('click', async () => {
+    clearErr('new-thread-err');
+    const subject = document.getElementById('nt-subject').value.trim();
+    const period = document.getElementById('nt-period').value.trim() || null;
+    const body = document.getElementById('nt-body').value.trim();
+    if (!subject) return showErr('new-thread-err', '제목을 입력하세요.');
+    if (!body) return showErr('new-thread-err', '내용을 입력하세요.');
+
+    try {
+      const { data: t, error: e1 } = await sb.from('qa_threads').insert({
+        member_id: currentUser.id, subject, related_period: period, status: '대기'
+      }).select().single();
+      if (e1) throw e1;
+
+      const { error: e2 } = await sb.from('qa_messages').insert({
+        thread_id: t.id, sender_type: 'member', sender_name: currentUser.name, body
+      });
+      if (e2) throw e2;
+
+      document.getElementById('new-thread-modal').classList.add('hidden');
+      await loadThreads();
+    } catch (e) {
+      console.error(e);
+      showErr('new-thread-err', '등록 오류: ' + e.message);
+    }
+  });
+
+  let activeThreadId = null;
+  async function openThread(id, subject) {
+    activeThreadId = id;
+    document.getElementById('thread-subject').textContent = subject;
+    document.getElementById('messages').innerHTML = '<div class="empty">로딩 중...</div>';
+    document.getElementById('thread-modal').classList.remove('hidden');
+    await loadMessages();
+  }
+
+  async function loadMessages() {
+    try {
+      const { data, error } = await sb.from('qa_messages').select('*').eq('thread_id', activeThreadId).order('created_at', { ascending: true });
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        document.getElementById('messages').innerHTML = '<div class="empty">메시지가 없습니다.</div>';
+        return;
+      }
+      let html = '';
+      data.forEach(m => {
+        html += `<div class="msg ${m.sender_type}">
+          <div class="meta"><strong>${escapeHTML(m.sender_name)}</strong> · ${fmtDateTime(m.created_at)}</div>
+          ${escapeHTML(m.body)}
+        </div>`;
+      });
+      document.getElementById('messages').innerHTML = html;
+    } catch (e) {
+      console.error(e);
+      document.getElementById('messages').innerHTML = '<div class="empty" style="color:var(--danger);">로딩 오류: ' + escapeHTML(e.message) + '</div>';
+    }
+  }
+
+  document.getElementById('reply-btn').addEventListener('click', async () => {
+    const body = document.getElementById('reply-body').value.trim();
+    if (!body) return;
+    try {
+      const { error } = await sb.from('qa_messages').insert({
+        thread_id: activeThreadId, sender_type: 'member', sender_name: currentUser.name, body
+      });
+      if (error) throw error;
+      await sb.from('qa_threads').update({ updated_at: new Date().toISOString(), status: '대기' }).eq('id', activeThreadId);
+      document.getElementById('reply-body').value = '';
+      await loadMessages();
+      await loadThreads();
+    } catch (e) {
+      console.error(e);
+      alert('전송 오류: ' + e.message);
+    }
+  });
+
+  document.querySelectorAll('[data-close]').forEach(el => {
+    el.addEventListener('click', () => document.getElementById(el.dataset.close).classList.add('hidden'));
+  });
+  document.querySelectorAll('.modal-backdrop').forEach(bd => {
+    bd.addEventListener('click', (e) => { if (e.target === bd) bd.classList.add('hidden'); });
+  });
+
+  try {
+    const saved = sessionStorage.getItem('member_user');
+    if (saved) {
+      currentUser = JSON.parse(saved);
+      enterApp();
+    }
+  } catch (_) {}
+</script>
+</body>
+</html>
