@@ -1,0 +1,3 @@
+// Supabase 연결 설정
+window.SUPABASE_URL = 'https://uslgymphblxqayjordmi.supabase.co';
+window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVzbGd5bXBoYmx4cWF5am9yZG1pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1ODg2MDksImV4cCI6MjA5ODE2NDYwOX0.kLJyAovpXsMUB0zRWg7tuOo6QMtCKuxZKbn0rgY03kI';
