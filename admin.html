@@ -1,1 +1,859 @@
-This attachment was removed because it contains data that could pose a security risk.
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>관리자 콘솔</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="config.js"></script>
+<style>
+  :root {
+    --bg: #f5f3ee; --bg-card: #ffffff; --bg-soft: #ebe7df;
+    --text: #1f1d1a; --text-muted: #6b6760; --border: #e3ddd1;
+    --accent: #2f5d8e; --accent-soft: #e1ebf5;
+    --ok: #2f7a4a; --ok-soft: #e3f0e6;
+    --warn: #b07a18; --warn-soft: #f7edd6;
+    --danger: #b22e2e; --danger-soft: #f5e0e0;
+    --radius: 10px; --radius-sm: 6px;
+    --shadow: 0 1px 3px rgba(40,30,20,0.06), 0 6px 18px rgba(40,30,20,0.04);
+    --s1: 6px; --s2: 12px; --s3: 18px; --s4: 26px; --s5: 40px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1815; --bg-card: #25221e; --bg-soft: #2f2b26;
+      --text: #ece8df; --text-muted: #9c958a; --border: #3a3530;
+      --accent: #6fa5d8; --accent-soft: #1f2c3a;
+      --ok: #6dba87; --ok-soft: #20322a;
+      --warn: #d9a949; --warn-soft: #34291a;
+      --danger: #e07474; --danger-soft: #36211f;
+      --shadow: 0 1px 3px rgba(0,0,0,0.3), 0 6px 18px rgba(0,0,0,0.25);
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'Noto Sans KR', sans-serif; font-size: 14px; line-height: 1.55;
+  }
+  .num { font-variant-numeric: tabular-nums; }
+  button { font-family: inherit; cursor: pointer; }
+  input, textarea, select { font-family: inherit; font-size: 14px; }
+  .hidden { display: none !important; }
+  .muted { color: var(--text-muted); font-size: 12.5px; }
+
+  .login-wrap {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: var(--s3);
+  }
+  .login-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 14px; padding: var(--s4); max-width: 400px; width: 100%; box-shadow: var(--shadow);
+  }
+  .login-card h1 { margin: 0 0 var(--s1); font-size: 22px; font-weight: 700; }
+  .login-card .sub { color: var(--text-muted); font-size: 13px; margin-bottom: var(--s3); }
+  .login-card label { display: block; font-size: 12.5px; color: var(--text-muted); margin-bottom: 6px; }
+  .login-card input {
+    width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+    background: var(--bg); color: var(--text); font-size: 15px;
+  }
+  .err {
+    background: var(--danger-soft); color: var(--danger); padding: 10px 12px;
+    border-radius: var(--radius-sm); font-size: 13px; margin-bottom: var(--s2);
+  }
+  .ok {
+    background: var(--ok-soft); color: var(--ok); padding: 10px 12px;
+    border-radius: var(--radius-sm); font-size: 13px; margin-bottom: var(--s2);
+  }
+
+  .primary-btn, .btn {
+    padding: 10px 16px; border-radius: var(--radius-sm); border: none;
+    background: var(--accent); color: white; font-weight: 600; font-size: 13.5px;
+    transition: opacity 0.15s;
+  }
+  .primary-btn:hover, .btn:hover { opacity: 0.9; }
+  .primary-btn:disabled, .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn.secondary { background: var(--bg-soft); color: var(--text); }
+  .btn.danger { background: var(--danger); }
+  .btn.full { width: 100%; }
+
+  .wrap { max-width: 1100px; margin: 0 auto; padding: var(--s3) var(--s3) var(--s5); }
+  .top {
+    display: flex; align-items: center; justify-content: space-between;
+    padding-bottom: var(--s3); margin-bottom: var(--s3); border-bottom: 1px solid var(--border);
+  }
+  .top h1 { margin: 0; font-size: 20px; font-weight: 700; }
+  .top .sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .badge {
+    background: var(--accent-soft); color: var(--accent);
+    padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600;
+  }
+
+  .tabs {
+    display: flex; gap: 2px; background: var(--bg-soft);
+    padding: 4px; border-radius: var(--radius-sm); margin-bottom: var(--s3); width: fit-content;
+  }
+  .tab {
+    padding: 9px 18px; background: transparent; border: none;
+    color: var(--text-muted); font-weight: 500; border-radius: 4px; white-space: nowrap;
+  }
+  .tab.active { background: var(--bg-card); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s2); margin-bottom: var(--s3); }
+  @media (max-width: 720px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+  .stat {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: var(--s3) var(--s2);
+  }
+  .stat .label { font-size: 11.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+  .stat .value { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
+  .stat .value .unit { font-size: 14px; color: var(--text-muted); margin-left: 4px; font-weight: 500; }
+  .stat .value.danger { color: var(--danger); }
+  .stat .value.warn { color: var(--warn); }
+
+  .card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: var(--s3); margin-bottom: var(--s3);
+  }
+  .card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--s2); flex-wrap: wrap; gap: var(--s1); }
+  .card-head h3 { margin: 0; font-size: 15px; font-weight: 600; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid var(--border); }
+  th { font-weight: 600; color: var(--text-muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.03em; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .name-block strong { display: block; }
+  .name-block .phone { color: var(--text-muted); font-size: 12px; }
+  .status-pill {
+    display: inline-block; padding: 3px 9px; border-radius: 999px;
+    font-size: 11.5px; font-weight: 600;
+  }
+  .status-pill.ok { background: var(--ok-soft); color: var(--ok); }
+  .status-pill.warn { background: var(--warn-soft); color: var(--warn); }
+  .status-pill.danger { background: var(--danger-soft); color: var(--danger); }
+  .empty { padding: var(--s4) var(--s2); text-align: center; color: var(--text-muted); font-size: 13px; }
+  .row-btn { background: transparent; border: 1px solid var(--border); color: var(--text); padding: 5px 10px; border-radius: 4px; font-size: 12px; }
+  .row-btn:hover { background: var(--bg-soft); }
+
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    display: flex; align-items: center; justify-content: center; padding: var(--s2); z-index: 100;
+  }
+  .modal {
+    background: var(--bg-card); border-radius: var(--radius); max-width: 700px; width: 100%;
+    max-height: 90vh; display: flex; flex-direction: column; overflow: hidden;
+  }
+  .modal.wide { max-width: 850px; }
+  .modal-head {
+    padding: var(--s3); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .modal-head h3 { margin: 0; font-size: 16px; font-weight: 600; }
+  .modal-body { padding: var(--s3); overflow-y: auto; flex: 1; }
+  .modal-foot { padding: var(--s3); border-top: 1px solid var(--border); display: flex; gap: var(--s2); justify-content: flex-end; }
+  .close { background: transparent; border: none; font-size: 20px; color: var(--text-muted); cursor: pointer; padding: 4px 8px; }
+
+  .field { margin-bottom: var(--s2); }
+  .field label { display: block; font-size: 12.5px; color: var(--text-muted); margin-bottom: 4px; font-weight: 500; }
+  .field input, .field select, .field textarea {
+    width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+    background: var(--bg); color: var(--text);
+  }
+  .field textarea { min-height: 100px; resize: vertical; font-family: inherit; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s2); }
+
+  .messages { display: flex; flex-direction: column; gap: var(--s2); }
+  .msg {
+    padding: var(--s2) var(--s3); border-radius: var(--radius-sm);
+    max-width: 85%; word-break: break-word; white-space: pre-wrap;
+  }
+  .msg.member { background: var(--bg-soft); align-self: flex-start; }
+  .msg.admin { background: var(--accent-soft); align-self: flex-end; }
+  .msg .meta { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+  .msg .meta strong { color: var(--text); }
+
+  .spinner { width: 28px; height: 28px; border: 3px solid var(--bg-soft); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; margin: 0 auto var(--s2); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div id="login-view" class="login-wrap">
+  <div class="login-card">
+    <h1>관리자 로그인</h1>
+    <p class="sub">관리자 휴대폰 번호 11자리를 입력하세요.</p>
+    <div id="login-err" class="err hidden"></div>
+    <div class="field">
+      <label>휴대폰 번호</label>
+      <input id="admin-phone" type="tel" inputmode="numeric" maxlength="13" placeholder="01000000000" autocomplete="off" />
+    </div>
+    <button class="primary-btn full" id="login-btn" style="margin-top:var(--s2);">로그인</button>
+    <div class="muted" style="margin-top:var(--s3);padding-top:var(--s2);border-top:1px solid var(--border);">
+      ※ <a href="index.html" style="color:var(--text-muted);">메인으로</a>
+    </div>
+  </div>
+</div>
+
+<div class="wrap hidden" id="main">
+  <div class="top">
+    <div>
+      <h1>관리자 콘솔</h1>
+      <div class="sub">회원·회비·1:1 상담 관리</div>
+    </div>
+    <div style="display:flex;gap:var(--s2);align-items:center;">
+      <span class="badge" id="pending-badge">상담 대기 0건</span>
+      <button class="btn secondary" id="logout-btn">로그아웃</button>
+    </div>
+  </div>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="members">회원 / 회비</button>
+    <button class="tab" data-tab="qa">상담 (Q&amp;A)</button>
+  </div>
+
+  <div id="tab-members">
+    <div class="card">
+      <div class="card-head">
+        <h3>회원 목록</h3>
+        <div style="display:flex;gap:8px;">
+          <button class="primary-btn" id="upload-excel-btn" style="background:transparent;color:var(--accent);border:1px solid var(--accent);">📥 엑셀 업로드</button>
+          <button class="primary-btn" id="new-member-btn">+ 회원 등록</button>
+        </div>
+      </div>
+      <div id="members-wrap"></div>
+    </div>
+  </div>
+
+  <div id="tab-qa" class="hidden">
+    <div class="card">
+      <div class="card-head">
+        <h3>전체 상담 스레드</h3>
+        <span class="muted" id="threads-meta"></span>
+      </div>
+      <div id="threads-wrap"></div>
+    </div>
+  </div>
+</div>
+
+<div id="member-modal" class="modal-backdrop hidden">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>회원 등록</h3>
+      <button class="close" data-close="member-modal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div id="member-err" class="err hidden"></div>
+      <div class="field"><label>이름 *</label><input id="m-name" type="text" /></div>
+      <div class="field"><label>휴대폰 번호 *</label><input id="m-phone" type="tel" placeholder="01012345678" /></div>
+      <div class="field"><label>가입일</label><input id="m-join" type="date" /></div>
+      <div class="field"><label>메모</label><textarea id="m-memo"></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn secondary" data-close="member-modal">취소</button>
+      <button class="primary-btn" id="m-submit">등록</button>
+    </div>
+  </div>
+</div>
+
+<div id="fees-modal" class="modal-backdrop hidden">
+  <div class="modal wide">
+    <div class="modal-head">
+      <h3 id="fees-title">—</h3>
+      <button class="close" data-close="fees-modal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div id="fees-msg"></div>
+      <div class="card" style="background:var(--bg-soft);border:none;">
+        <h3 style="font-size:13px;margin-bottom:var(--s2);">+ 회비 추가/수정</h3>
+        <div class="row2">
+          <div class="field"><label>기간 (예: 2026-07) *</label><input id="f-period" type="text" placeholder="2026-07" /></div>
+          <div class="field"><label>부과액 *</label><input id="f-amount" type="number" value="50000" /></div>
+          <div class="field"><label>납부액</label><input id="f-paid" type="number" /></div>
+          <div class="field"><label>납부일</label><input id="f-date" type="date" /></div>
+        </div>
+        <div class="field"><label>메모</label><input id="f-note" type="text" /></div>
+        <button class="primary-btn" id="f-submit">저장 (Upsert)</button>
+      </div>
+      <h3 style="font-size:13px;margin:var(--s3) 0 var(--s2);">회비 내역</h3>
+      <div id="fees-list-wrap"></div>
+    </div>
+  </div>
+</div>
+
+<div id="upload-modal" class="modal-backdrop hidden">
+  <div class="modal wide">
+    <div class="modal-head">
+      <h3>엑셀 업로드</h3>
+      <button class="close" data-close="upload-modal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div id="up-step1">
+        <p class="muted" style="margin-bottom:var(--s2);">엑셀 파일 첫 행은 헤더(컬럼명)여야 합니다. 다음 컬럼이 인식됩니다:</p>
+        <ul style="font-size:13px;line-height:1.8;margin-left:20px;color:var(--text-muted);">
+          <li><strong style="color:var(--text);">이름</strong> (필수): "이름", "성명"</li>
+          <li><strong style="color:var(--text);">휴대폰</strong> (필수): "휴대폰", "전화", "연락처", "핸드폰", "폰번호", "번호"</li>
+          <li><strong style="color:var(--text);">회비 (선택)</strong>: 헤더에 "2026-01", "2026-02" 같은 기간(YYYY-MM) 형태이면 해당 월 납부액으로 자동 인식</li>
+        </ul>
+        <div class="field" style="margin-top:var(--s3);"><label>엑셀 파일 (.xlsx, .xls, .csv)</label><input id="excel-file" type="file" accept=".xlsx,.xls,.csv" /></div>
+        <div class="field"><label>기본 부과액 (회비 미입력 월 적용)</label><input id="default-fee" type="number" value="50000" /></div>
+        <div id="up-err" class="err hidden"></div>
+      </div>
+      <div id="up-step2" class="hidden">
+        <div id="up-summary" style="padding: 12px; background: var(--accent-soft); color: var(--accent); border-radius: var(--radius-sm); margin-bottom: var(--s3); font-size: 13px;"></div>
+        <div style="max-height: 350px; overflow-y: auto; border:1px solid var(--border); border-radius:var(--radius-sm);">
+          <table id="up-preview"></table>
+        </div>
+        <div id="up-warnings" style="margin-top: var(--s2); font-size: 12.5px; color: var(--warn);"></div>
+      </div>
+      <div id="up-step3" class="hidden">
+        <div id="up-result"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn secondary" data-close="upload-modal">취소</button>
+      <button class="primary-btn" id="up-parse">미리보기</button>
+      <button class="primary-btn hidden" id="up-confirm">저장 실행</button>
+      <button class="primary-btn hidden" id="up-done">완료</button>
+    </div>
+  </div>
+</div>
+
+<div id="thread-modal" class="modal-backdrop hidden">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="thread-subject">—</h3>
+      <button class="close" data-close="thread-modal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="muted" id="thread-meta" style="margin-bottom:var(--s2);"></div>
+      <div class="messages" id="messages"></div>
+    </div>
+    <div class="modal-foot" style="flex-direction:column;align-items:stretch;gap:var(--s2);">
+      <textarea id="reply-body" placeholder="관리자 답변 작성" style="width:100%;min-height:80px;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);"></textarea>
+      <div style="display:flex;gap:var(--s2);justify-content:flex-end;">
+        <button class="btn danger" id="close-thread-btn">스레드 종료</button>
+        <button class="primary-btn" id="reply-btn">답변 전송</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  const sb = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+
+  function escapeHTML(s) { if (s == null) return ''; const d = document.createElement('div'); d.textContent = String(s); return d.innerHTML; }
+  function fmtKRW(n) { return new Intl.NumberFormat('ko-KR').format(Number(n || 0)); }
+  function fmtDate(s) { if (!s) return '—'; const d = new Date(s); return isNaN(d) ? s : d.toLocaleDateString('ko-KR'); }
+  function fmtDateTime(s) { if (!s) return '—'; const d = new Date(s); return isNaN(d) ? s : d.toLocaleString('ko-KR', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' }); }
+  function fmtPhone(p) { const s = String(p||''); return s.length === 11 ? s.slice(0,3)+'-'+s.slice(3,7)+'-'+s.slice(7) : s; }
+  function normPhone(s) { return String(s||'').replace(/[^0-9]/g, ''); }
+  function show(id, msg, cls='err') {
+    const el = document.getElementById(id);
+    el.className = cls;
+    el.textContent = msg;
+    el.classList.remove('hidden');
+  }
+  function hideEl(id) { document.getElementById(id)?.classList.add('hidden'); }
+  function statusPillClass(s) { return s === '완납' ? 'ok' : (s === '부분납' ? 'warn' : 'danger'); }
+  function threadStatusClass(s) { return s === '답변완료' ? 'ok' : (s === '종료' ? 'warn' : 'danger'); }
+  function inferStatus(amount, paid) {
+    paid = Number(paid || 0); amount = Number(amount || 0);
+    if (paid <= 0) return '미납';
+    if (paid >= amount) return '완납';
+    return '부분납';
+  }
+
+  let adminUser = null;
+
+  document.getElementById('login-btn').addEventListener('click', doAdminLogin);
+  document.getElementById('admin-phone').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') doAdminLogin();
+  });
+
+  async function doAdminLogin() {
+    hideEl('login-err');
+    const phone = normPhone(document.getElementById('admin-phone').value);
+    if (!phone || phone.length !== 11) return show('login-err', '휴대폰 번호 11자리를 정확히 입력해 주세요.');
+    try {
+      const { data, error } = await sb.from('members').select('id, name, phone, is_admin').eq('phone', phone).eq('is_admin', true).maybeSingle();
+      if (error) throw error;
+      if (!data) return show('login-err', '관리자 권한이 없는 번호입니다.');
+      adminUser = data;
+      try { sessionStorage.setItem('admin_user', JSON.stringify(data)); } catch (_) {}
+      enterAdmin();
+    } catch (e) {
+      console.error(e);
+      show('login-err', '로그인 중 오류: ' + e.message);
+    }
+  }
+
+  async function enterAdmin() {
+    document.getElementById('login-view').classList.add('hidden');
+    document.getElementById('main').classList.remove('hidden');
+    await loadStats();
+    await loadMembers();
+  }
+
+  document.getElementById('logout-btn').addEventListener('click', () => {
+    adminUser = null;
+    try { sessionStorage.removeItem('admin_user'); } catch (_) {}
+    document.getElementById('admin-phone').value = '';
+    document.getElementById('main').classList.add('hidden');
+    document.getElementById('login-view').classList.remove('hidden');
+  });
+
+  document.querySelectorAll('.tab').forEach(t => {
+    t.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      const tab = t.dataset.tab;
+      document.getElementById('tab-members').classList.toggle('hidden', tab !== 'members');
+      document.getElementById('tab-qa').classList.toggle('hidden', tab !== 'qa');
+      if (tab === 'qa') loadThreads();
+    });
+  });
+
+  async function loadStats() {
+    try {
+      const [{ count: memberCount }, { data: fees }, { data: threads }] = await Promise.all([
+        sb.from('members').select('*', { count: 'exact', head: true }).eq('is_admin', false),
+        sb.from('fee_payments').select('amount, paid_amount'),
+        sb.from('qa_threads').select('status')
+      ]);
+      let totalAmount = 0, totalPaid = 0;
+      (fees || []).forEach(r => { totalAmount += Number(r.amount || 0); totalPaid += Number(r.paid_amount || 0); });
+      const totalUnpaid = totalAmount - totalPaid;
+      const pendingThreads = (threads || []).filter(t => t.status === '대기').length;
+      const totalThreads = (threads || []).length;
+
+      document.getElementById('stats').innerHTML = `
+        <div class="stat"><div class="label">회원 수</div><div class="value num">${memberCount || 0}<span class="unit">명</span></div></div>
+        <div class="stat"><div class="label">미납 총액</div><div class="value num ${totalUnpaid>0?'danger':''}">${fmtKRW(totalUnpaid)}<span class="unit">원</span></div></div>
+        <div class="stat"><div class="label">상담 대기</div><div class="value num ${pendingThreads>0?'warn':''}">${pendingThreads}<span class="unit">건</span></div></div>
+        <div class="stat"><div class="label">전체 상담</div><div class="value num">${totalThreads}<span class="unit">건</span></div></div>
+      `;
+      document.getElementById('pending-badge').textContent = `상담 대기 ${pendingThreads}건`;
+    } catch (e) { console.error(e); }
+  }
+
+  async function loadMembers() {
+    try {
+      const { data: members, error } = await sb.from('members').select('*').eq('is_admin', false).order('name');
+      if (error) throw error;
+
+      const { data: fees } = await sb.from('fee_payments').select('member_id, amount, paid_amount');
+      const aggMap = new Map();
+      (fees || []).forEach(f => {
+        const a = aggMap.get(f.member_id) || { total: 0, paid: 0 };
+        a.total += Number(f.amount || 0);
+        a.paid += Number(f.paid_amount || 0);
+        aggMap.set(f.member_id, a);
+      });
+
+      if (!members || members.length === 0) {
+        document.getElementById('members-wrap').innerHTML = '<div class="empty">등록된 회원이 없습니다.</div>';
+        return;
+      }
+      let html = '<table><thead><tr><th>이름</th><th>가입일</th><th class="num">부과</th><th class="num">납부</th><th class="num">미납</th><th>메모</th><th></th></tr></thead><tbody>';
+      members.forEach(m => {
+        const a = aggMap.get(m.id) || { total: 0, paid: 0 };
+        const unpaid = a.total - a.paid;
+        html += `<tr>
+          <td><div class="name-block"><strong>${escapeHTML(m.name)}</strong><div class="phone">${escapeHTML(fmtPhone(m.phone))}</div></div></td>
+          <td>${fmtDate(m.join_date)}</td>
+          <td class="num">${fmtKRW(a.total)}</td>
+          <td class="num">${fmtKRW(a.paid)}</td>
+          <td class="num" style="${unpaid>0?'color:var(--danger);font-weight:600;':''}">${fmtKRW(unpaid)}</td>
+          <td style="font-size:12px;color:var(--text-muted);">${escapeHTML(m.memo || '')}</td>
+          <td><button class="row-btn" data-mid="${m.id}" data-mname="${escapeHTML(m.name)}" data-mphone="${escapeHTML(m.phone)}">회비 관리</button></td>
+        </tr>`;
+      });
+      html += '</tbody></table>';
+      document.getElementById('members-wrap').innerHTML = html;
+      document.querySelectorAll('.row-btn[data-mid]').forEach(b => {
+        b.addEventListener('click', () => openFees({
+          id: Number(b.dataset.mid),
+          name: b.dataset.mname,
+          phone: b.dataset.mphone
+        }));
+      });
+    } catch (e) {
+      console.error(e);
+      document.getElementById('members-wrap').innerHTML = '<div class="empty" style="color:var(--danger);">로딩 오류: ' + escapeHTML(e.message) + '</div>';
+    }
+  }
+
+  document.getElementById('new-member-btn').addEventListener('click', () => {
+    hideEl('member-err');
+    ['m-name','m-phone','m-join','m-memo'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('m-join').value = new Date().toISOString().slice(0, 10);
+    document.getElementById('member-modal').classList.remove('hidden');
+  });
+
+  document.getElementById('m-submit').addEventListener('click', async () => {
+    hideEl('member-err');
+    const name = document.getElementById('m-name').value.trim();
+    const phone = normPhone(document.getElementById('m-phone').value);
+    const joinDate = document.getElementById('m-join').value || null;
+    const memo = document.getElementById('m-memo').value.trim() || null;
+    if (!name) return show('member-err', '이름을 입력하세요.');
+    if (!phone || phone.length < 10) return show('member-err', '올바른 휴대폰 번호를 입력하세요.');
+    try {
+      const { error } = await sb.from('members').insert({ name, phone, join_date: joinDate, memo, is_admin: false });
+      if (error) throw error;
+      document.getElementById('member-modal').classList.add('hidden');
+      await loadMembers();
+      await loadStats();
+    } catch (e) {
+      console.error(e);
+      show('member-err', '등록 오류: ' + (e.message.includes('duplicate') ? '이미 등록된 휴대폰번호입니다.' : e.message));
+    }
+  });
+
+  let activeMember = null;
+  async function openFees(m) {
+    activeMember = m;
+    document.getElementById('fees-title').textContent = `${m.name} · ${fmtPhone(m.phone)} 회비 관리`;
+    document.getElementById('fees-msg').innerHTML = '';
+    ['f-period','f-paid','f-date','f-note'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('f-amount').value = 50000;
+    document.getElementById('fees-modal').classList.remove('hidden');
+    await loadMemberFees();
+  }
+
+  async function loadMemberFees() {
+    try {
+      const { data, error } = await sb.from('fee_payments').select('*').eq('member_id', activeMember.id).order('period', { ascending: false });
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        document.getElementById('fees-list-wrap').innerHTML = '<div class="empty">회비 내역이 없습니다.</div>';
+        return;
+      }
+      let html = '<table><thead><tr><th>기간</th><th class="num">부과</th><th class="num">납부</th><th>납부일</th><th>상태</th><th>메모</th></tr></thead><tbody>';
+      data.forEach(r => {
+        html += `<tr>
+          <td><strong>${escapeHTML(r.period)}</strong></td>
+          <td class="num">${fmtKRW(r.amount)}</td>
+          <td class="num">${fmtKRW(r.paid_amount)}</td>
+          <td>${fmtDate(r.paid_date)}</td>
+          <td><span class="status-pill ${statusPillClass(r.status)}">${escapeHTML(r.status)}</span></td>
+          <td style="font-size:12px;color:var(--text-muted);">${escapeHTML(r.note || '')}</td>
+        </tr>`;
+      });
+      html += '</tbody></table>';
+      document.getElementById('fees-list-wrap').innerHTML = html;
+    } catch (e) {
+      console.error(e);
+      document.getElementById('fees-list-wrap').innerHTML = '<div class="empty" style="color:var(--danger);">' + escapeHTML(e.message) + '</div>';
+    }
+  }
+
+  document.getElementById('f-submit').addEventListener('click', async () => {
+    const period = document.getElementById('f-period').value.trim();
+    const amount = Number(document.getElementById('f-amount').value || 0);
+    const paid = Number(document.getElementById('f-paid').value || 0);
+    const date = document.getElementById('f-date').value || null;
+    const note = document.getElementById('f-note').value.trim() || null;
+    if (!period.match(/^\d{4}-\d{2}$/)) {
+      show('fees-msg', '기간 형식이 잘못되었습니다. YYYY-MM 형태로 입력하세요.');
+      return;
+    }
+    if (amount <= 0) {
+      show('fees-msg', '부과액을 입력하세요.');
+      return;
+    }
+    const status = inferStatus(amount, paid);
+    try {
+      const { error } = await sb.from('fee_payments').upsert({
+        member_id: activeMember.id, period, amount, paid_amount: paid, paid_date: date, status, note
+      }, { onConflict: 'member_id,period' });
+      if (error) throw error;
+      show('fees-msg', `${period} 회비 저장됨 (상태: ${status})`, 'ok');
+      await loadMemberFees();
+      await loadMembers();
+      await loadStats();
+    } catch (e) {
+      console.error(e);
+      show('fees-msg', '저장 오류: ' + e.message);
+    }
+  });
+
+  async function loadThreads() {
+    try {
+      const { data: threads, error } = await sb.from('qa_threads').select('*').order('created_at', { ascending: false });
+      if (error) throw error;
+      if (!threads || threads.length === 0) {
+        document.getElementById('threads-wrap').innerHTML = '<div class="empty">상담 내역이 없습니다.</div>';
+        document.getElementById('threads-meta').textContent = '';
+        return;
+      }
+      const memberIds = [...new Set(threads.map(t => t.member_id))];
+      const { data: members } = await sb.from('members').select('id, name, phone').in('id', memberIds);
+      const mmap = new Map((members || []).map(m => [m.id, m]));
+
+      const pending = threads.filter(t => t.status === '대기').length;
+      document.getElementById('threads-meta').textContent = `전체 ${threads.length}건 · 대기 ${pending}건`;
+
+      let html = '<table><thead><tr><th>회원</th><th>제목</th><th>관련 기간</th><th>등록일</th><th>상태</th><th></th></tr></thead><tbody>';
+      threads.forEach(t => {
+        const m = mmap.get(t.member_id) || {};
+        html += `<tr>
+          <td><div class="name-block"><strong>${escapeHTML(m.name || '—')}</strong><div class="phone">${escapeHTML(fmtPhone(m.phone))}</div></div></td>
+          <td>${escapeHTML(t.subject)}</td>
+          <td>${escapeHTML(t.related_period || '—')}</td>
+          <td>${fmtDateTime(t.created_at)}</td>
+          <td><span class="status-pill ${threadStatusClass(t.status)}">${escapeHTML(t.status)}</span></td>
+          <td><button class="row-btn" data-tid="${t.id}" data-tsubj="${escapeHTML(t.subject)}" data-mname="${escapeHTML(m.name||'')}" data-mphone="${escapeHTML(m.phone||'')}">보기</button></td>
+        </tr>`;
+      });
+      html += '</tbody></table>';
+      document.getElementById('threads-wrap').innerHTML = html;
+      document.querySelectorAll('.row-btn[data-tid]').forEach(b => {
+        b.addEventListener('click', () => openThread(Number(b.dataset.tid), b.dataset.tsubj, b.dataset.mname, b.dataset.mphone));
+      });
+    } catch (e) {
+      console.error(e);
+      document.getElementById('threads-wrap').innerHTML = '<div class="empty" style="color:var(--danger);">' + escapeHTML(e.message) + '</div>';
+    }
+  }
+
+  let activeThread = null;
+  async function openThread(id, subject, mname, mphone) {
+    activeThread = { id, subject, mname, mphone };
+    document.getElementById('thread-subject').textContent = subject;
+    document.getElementById('thread-meta').innerHTML = '<strong>' + escapeHTML(mname) + '</strong> · ' + escapeHTML(fmtPhone(mphone));
+    document.getElementById('messages').innerHTML = '<div class="empty">로딩 중...</div>';
+    document.getElementById('reply-body').value = '';
+    document.getElementById('thread-modal').classList.remove('hidden');
+    await loadMessages();
+  }
+
+  async function loadMessages() {
+    try {
+      const { data, error } = await sb.from('qa_messages').select('*').eq('thread_id', activeThread.id).order('created_at', { ascending: true });
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        document.getElementById('messages').innerHTML = '<div class="empty">메시지가 없습니다.</div>';
+        return;
+      }
+      let html = '';
+      data.forEach(m => {
+        html += `<div class="msg ${m.sender_type}">
+          <div class="meta"><strong>${escapeHTML(m.sender_name)}</strong> · ${fmtDateTime(m.created_at)}</div>
+          ${escapeHTML(m.body)}
+        </div>`;
+      });
+      document.getElementById('messages').innerHTML = html;
+    } catch (e) {
+      console.error(e);
+      document.getElementById('messages').innerHTML = '<div class="empty" style="color:var(--danger);">' + escapeHTML(e.message) + '</div>';
+    }
+  }
+
+  document.getElementById('reply-btn').addEventListener('click', async () => {
+    const body = document.getElementById('reply-body').value.trim();
+    if (!body) return;
+    try {
+      const { error: e1 } = await sb.from('qa_messages').insert({
+        thread_id: activeThread.id, sender_type: 'admin', sender_name: adminUser.name, body
+      });
+      if (e1) throw e1;
+      const { error: e2 } = await sb.from('qa_threads').update({ status: '답변완료', updated_at: new Date().toISOString() }).eq('id', activeThread.id);
+      if (e2) throw e2;
+      document.getElementById('reply-body').value = '';
+      await loadMessages();
+      await loadThreads();
+      await loadStats();
+    } catch (e) {
+      console.error(e);
+      alert('전송 오류: ' + e.message);
+    }
+  });
+
+  document.getElementById('close-thread-btn').addEventListener('click', async () => {
+    if (!confirm('이 상담 스레드를 종료하시겠습니까?')) return;
+    try {
+      const { error } = await sb.from('qa_threads').update({ status: '종료', updated_at: new Date().toISOString() }).eq('id', activeThread.id);
+      if (error) throw error;
+      document.getElementById('thread-modal').classList.add('hidden');
+      await loadThreads();
+      await loadStats();
+    } catch (e) {
+      alert('종료 오류: ' + e.message);
+    }
+  });
+
+  document.getElementById('upload-excel-btn').addEventListener('click', () => {
+    document.getElementById('up-step1').classList.remove('hidden');
+    document.getElementById('up-step2').classList.add('hidden');
+    document.getElementById('up-step3').classList.add('hidden');
+    document.getElementById('up-parse').classList.remove('hidden');
+    document.getElementById('up-confirm').classList.add('hidden');
+    document.getElementById('up-done').classList.add('hidden');
+    hideEl('up-err');
+    document.getElementById('excel-file').value = '';
+    document.getElementById('upload-modal').classList.remove('hidden');
+  });
+
+  let parsedRows = [];
+  function findCol(headers, keywords) {
+    for (let i = 0; i < headers.length; i++) {
+      const h = String(headers[i] || '').trim();
+      for (const k of keywords) if (h.includes(k)) return i;
+    }
+    return -1;
+  }
+  function normalizePhoneStr(v) {
+    return String(v || '').replace(/[^0-9]/g, '');
+  }
+
+  document.getElementById('up-parse').addEventListener('click', async () => {
+    hideEl('up-err');
+    const file = document.getElementById('excel-file').files[0];
+    if (!file) return show('up-err', '엑셀 파일을 선택하세요.');
+    const defaultFee = Number(document.getElementById('default-fee').value || 50000);
+
+    try {
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+      if (aoa.length < 2) return show('up-err', '데이터가 부족합니다.');
+      const headers = aoa[0];
+      const nameIdx = findCol(headers, ['이름', '성명']);
+      const phoneIdx = findCol(headers, ['휴대폰', '전화', '연락처', '핸드폰', '폰번호', '번호']);
+      if (nameIdx < 0) return show('up-err', '"이름" 열을 찾을 수 없습니다.');
+      if (phoneIdx < 0) return show('up-err', '"휴대폰 번호" 열을 찾을 수 없습니다.');
+
+      const feeCols = [];
+      for (let i = 0; i < headers.length; i++) {
+        if (i === nameIdx || i === phoneIdx) continue;
+        const h = String(headers[i] || '').trim();
+        if (/^\d{4}-\d{1,2}$/.test(h)) {
+          const [y, m] = h.split('-');
+          feeCols.push({ idx: i, period: y + '-' + String(m).padStart(2, '0') });
+        }
+      }
+
+      const rows = [];
+      const warnings = [];
+      for (let r = 1; r < aoa.length; r++) {
+        const row = aoa[r];
+        const name = String(row[nameIdx] || '').trim();
+        const phone = normalizePhoneStr(row[phoneIdx]);
+        if (!name && !phone) continue;
+        if (!name || !phone) { warnings.push(`${r+1}행: 이름 또는 휴대폰 누락 (건너뜀)`); continue; }
+        if (phone.length < 10 || phone.length > 11) { warnings.push(`${r+1}행 (${name}): 휴대폰 번호 형식 이상 (건너뜀)`); continue; }
+        const fees = [];
+        feeCols.forEach(fc => {
+          const v = row[fc.idx];
+          if (v === '' || v == null) return;
+          const paid = Number(String(v).replace(/[^0-9.-]/g, ''));
+          if (isNaN(paid)) return;
+          fees.push({ period: fc.period, amount: defaultFee, paid_amount: paid, status: inferStatus(defaultFee, paid) });
+        });
+        rows.push({ name, phone, fees });
+      }
+
+      if (rows.length === 0) return show('up-err', '저장할 행이 없습니다.');
+      parsedRows = rows;
+
+      document.getElementById('up-summary').innerHTML = `총 <strong>${rows.length}</strong>명 회원 / 회비 행 ${rows.reduce((s, r) => s + r.fees.length, 0)}건`;
+      let html = '<thead><tr><th style="padding:6px 10px;border-bottom:1px solid var(--border);">이름</th><th style="padding:6px 10px;border-bottom:1px solid var(--border);">휴대폰</th><th style="padding:6px 10px;border-bottom:1px solid var(--border);">회비 행 수</th></tr></thead><tbody>';
+      rows.forEach(r => {
+        html += '<tr>';
+        html += '<td style="padding:6px 10px;border-bottom:1px solid var(--border);">' + escapeHTML(r.name) + '</td>';
+        html += '<td style="padding:6px 10px;border-bottom:1px solid var(--border);">' + escapeHTML(fmtPhone(r.phone)) + '</td>';
+        html += '<td style="padding:6px 10px;border-bottom:1px solid var(--border);">' + r.fees.length + '</td>';
+        html += '</tr>';
+      });
+      html += '</tbody>';
+      document.getElementById('up-preview').innerHTML = html;
+      document.getElementById('up-warnings').innerHTML = warnings.length ? '⚠️ ' + warnings.join('<br>') : '';
+
+      document.getElementById('up-step1').classList.add('hidden');
+      document.getElementById('up-step2').classList.remove('hidden');
+      document.getElementById('up-parse').classList.add('hidden');
+      document.getElementById('up-confirm').classList.remove('hidden');
+    } catch (e) {
+      console.error(e);
+      show('up-err', '파싱 오류: ' + e.message);
+    }
+  });
+
+  document.getElementById('up-confirm').addEventListener('click', async () => {
+    document.getElementById('up-step2').classList.add('hidden');
+    document.getElementById('up-step3').classList.remove('hidden');
+    document.getElementById('up-confirm').classList.add('hidden');
+    const result = document.getElementById('up-result');
+    result.innerHTML = '<div style="text-align:center;padding:var(--s3);"><div class="spinner"></div>저장 중...</div>';
+
+    const defaultFee = Number(document.getElementById('default-fee').value || 50000);
+    try {
+      await sb.from('app_settings').upsert({ key: 'default_fee_amount', value: String(defaultFee), updated_at: new Date().toISOString() });
+    } catch (_) {}
+
+    let created = 0, feeCount = 0;
+    const errors = [];
+    const total = parsedRows.length;
+    for (let i = 0; i < total; i++) {
+      const r = parsedRows[i];
+      result.innerHTML = '<div style="text-align:center;padding:var(--s3);"><div class="spinner"></div>저장 중… <strong>' + (i+1) + ' / ' + total + '</strong><br><span style="color:var(--text-muted);font-size:12.5px;">' + escapeHTML(r.name) + ' (' + fmtPhone(r.phone) + ')</span></div>';
+      try {
+        const { data: m, error: em } = await sb.from('members').upsert({ phone: r.phone, name: r.name, is_admin: false }, { onConflict: 'phone' }).select().single();
+        if (em) throw em;
+        created++;
+        for (const f of r.fees) {
+          try {
+            await sb.from('fee_payments').upsert({
+              member_id: m.id, period: f.period, amount: f.amount,
+              paid_amount: f.paid_amount, status: f.status
+            }, { onConflict: 'member_id,period' });
+            feeCount++;
+          } catch (fe) {
+            errors.push(`${r.name} ${f.period}: ${fe.message}`);
+          }
+        }
+      } catch (e) {
+        errors.push(`${r.name}: ${e.message}`);
+      }
+    }
+
+    let html = '<div class="ok" style="margin-bottom:var(--s2);">✅ 회원 ' + created + '명 / 회비 ' + feeCount + '건 저장 완료</div>';
+    if (errors.length) {
+      html += '<div class="err"><strong>⚠️ 오류 ' + errors.length + '건:</strong><br>'
+        + errors.slice(0, 50).map(escapeHTML).join('<br>')
+        + (errors.length > 50 ? '<br>… 외 ' + (errors.length - 50) + '건' : '')
+        + '</div>';
+    }
+    result.innerHTML = html;
+    document.getElementById('up-done').classList.remove('hidden');
+
+    await loadMembers();
+    await loadStats();
+  });
+
+  document.getElementById('up-done').addEventListener('click', () => {
+    document.getElementById('upload-modal').classList.add('hidden');
+  });
+
+  document.querySelectorAll('[data-close]').forEach(el => {
+    el.addEventListener('click', () => document.getElementById(el.dataset.close).classList.add('hidden'));
+  });
+  document.querySelectorAll('.modal-backdrop').forEach(bd => {
+    bd.addEventListener('click', (e) => { if (e.target === bd) bd.classList.add('hidden'); });
+  });
+
+  try {
+    const saved = sessionStorage.getItem('admin_user');
+    if (saved) {
+      adminUser = JSON.parse(saved);
+      enterAdmin();
+    }
+  } catch (_) {}
+</script>
+
+</body>
+</html>
