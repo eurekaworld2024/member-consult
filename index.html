@@ -1,1 +1,80 @@
-This attachment was removed because it contains data that could pose a security risk.
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>회원 상담 시스템</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Noto Sans KR', -apple-system, sans-serif;
+    background: #f5f3ee;
+    color: #1f1d1a;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  @media (prefers-color-scheme: dark) {
+    body { background: #1a1815; color: #ece8df; }
+    .card { background: #25221e; border-color: #3a3530; }
+    .btn-outline { color: #ece8df; border-color: #3a3530; }
+  }
+  .wrap { max-width: 440px; width: 100%; text-align: center; }
+  h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.02em; }
+  .sub { color: #6b6760; font-size: 14px; margin-bottom: 32px; }
+  .card {
+    background: white;
+    border: 1px solid #e3ddd1;
+    border-radius: 14px;
+    padding: 28px 24px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 3px rgba(40,30,20,0.06), 0 8px 24px rgba(40,30,20,0.04);
+    text-align: left;
+  }
+  .card h3 { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+  .card p { font-size: 13px; color: #6b6760; margin-bottom: 16px; line-height: 1.55; }
+  .btn {
+    display: block;
+    width: 100%;
+    padding: 14px;
+    border-radius: 8px;
+    border: none;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    text-align: center;
+    transition: opacity 0.15s;
+  }
+  .btn:hover { opacity: 0.9; }
+  .btn-primary { background: #b8462b; color: white; }
+  .btn-secondary { background: #2f5d8e; color: white; }
+  .footer { font-size: 12px; color: #9c958a; margin-top: 24px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>회원 상담 시스템</h1>
+  <p class="sub">휴대폰번호로 로그인하세요</p>
+
+  <div class="card">
+    <h3>회원 상담실</h3>
+    <p>본인 회비 현황 확인 및 1:1 상담</p>
+    <a href="member.html" class="btn btn-primary">회원 로그인</a>
+  </div>
+
+  <div class="card">
+    <h3>관리자 콘솔</h3>
+    <p>회원·회비·상담 관리</p>
+    <a href="admin.html" class="btn btn-secondary">관리자 로그인</a>
+  </div>
+
+  <div class="footer">© 회원 상담 시스템</div>
+</div>
+</body>
+</html>
